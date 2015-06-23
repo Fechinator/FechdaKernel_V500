@@ -435,10 +435,6 @@ static unsigned int disable_hotplug_asleep;			// ZZ: for setting hotplug on/off 
 #endif /* ENABLE_HOTPLUGGING */
 #endif
 
-#ifdef USE_LCD_NOTIFIER
-static struct notifier_block zzmoove_lcd_notif;
-#endif
-
 #ifdef ENABLE_INPUTBOOSTER
 // ff: Input Booster variables
 static unsigned int boost_on_tsp = DEF_INPUTBOOST_ON_TSP;	// ff: hardcoded since it'd be silly not to use it
@@ -7745,12 +7741,12 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		}
 		mutex_unlock(&dbs_mutex);
 		dbs_timer_init(this_dbs_info);
-#if defined(CONFIG_HAS_EARLYSUSPEND) && !defined (DISABLE_POWER_MANAGEMENT)
+/*#if defined(CONFIG_HAS_EARLYSUSPEND) && !defined (DISABLE_POWER_MANAGEMENT)
 		register_early_suspend(&_powersave_early_suspend);
 #elif defined(CONFIG_POWERSUSPEND) && !defined (DISABLE_POWER_MANAGEMENT)
 		if (cpu == 0)
-		    register_power_suspend(&powersave_powersuspend);
-#endif
+		    register_power_suspend(&powersave_powersuspend); 
+#endif */
 		break;
 
 	case CPUFREQ_GOV_STOP:
@@ -7794,12 +7790,12 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		if (!dbs_enable)
 		    sysfs_remove_group(cpufreq_global_kobject,
 		   &dbs_attr_group);
-#if defined(CONFIG_HAS_EARLYSUSPEND) && !defined (DISABLE_POWER_MANAGEMENT)
+/* #if defined(CONFIG_HAS_EARLYSUSPEND) && !defined (DISABLE_POWER_MANAGEMENT)
 		unregister_early_suspend(&_powersave_early_suspend);
 #elif defined(CONFIG_POWERSUSPEND) && !defined (DISABLE_POWER_MANAGEMENT)
 		if (cpu == 0)
 		    unregister_power_suspend(&powersave_powersuspend);
-#endif
+#endif */
 		break;
 
 	case CPUFREQ_GOV_LIMITS:
@@ -7857,37 +7853,6 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 	return 0;
 }
 
-#ifdef USE_LCD_NOTIFIER
-// AP: callback handler for lcd notifier
-static int zzmoove_lcd_notifier_callback(struct notifier_block *this,
-								unsigned long event, void *data)
-{
-	switch (event)
-	{
-		case LCD_EVENT_OFF_END:
-
-			if (!suspend_flag)
-			    zzmoove_suspend();
-#ifdef ZZMOOVE_DEBUG
-			pr_info("[zzmoove/lcd_notifier] Screen switched off.\n");
-#endif
-			break;
-
-		case LCD_EVENT_ON_START:
-
-			if (suspend_flag)
-			    zzmoove_resume();
-#ifdef ZZMOOVE_DEBUG
-			pr_info("[zzmoove/lcd_notifier] Screen switched on.\n");
-#endif
-			break;
-
-		default:
-			break;
-	}
-return 0;
-}
-#endif
 
 #ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_ZZMOOVE
 static
@@ -7933,14 +7898,6 @@ static int __init cpufreq_gov_dbs_init(void)						// ZZ: idle exit time handling
     INIT_WORK(&hotplug_online_work, hotplug_online_work_fn);				// ZZ: init hotplug online work
 #endif /* ENABLE_HOTPLUGGING */
 
-#ifdef USE_LCD_NOTIFIER
-	// AP: register callback handler for lcd notifier
-	zzmoove_lcd_notif.notifier_call = zzmoove_lcd_notifier_callback;
-	if (lcd_register_client(&zzmoove_lcd_notif) != 0) {
-		pr_err("%s: Failed to register lcd callback\n", __func__);
-		return -EFAULT;
-	}
-#endif
 	return cpufreq_register_governor(&cpufreq_gov_zzmoove);
 }
 
@@ -7950,10 +7907,6 @@ static void __exit cpufreq_gov_dbs_exit(void)
 	destroy_workqueue(dbs_wq);
 #ifdef ENABLE_WORK_RESTARTLOOP
 	destroy_workqueue(dbs_aux_wq);
-#endif
-
-#ifdef USE_LCD_NOTIFIER
-	lcd_unregister_client(&zzmoove_lcd_notif);
 #endif
 }
 
